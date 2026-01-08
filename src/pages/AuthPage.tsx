@@ -1,26 +1,45 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Bot, Mail, Lock, ArrowRight, Sparkles } from "lucide-react";
+import { Bot, User, Lock, ArrowRight, Sparkles } from "lucide-react";
+import { login, register, isAuthenticated } from "@/lib/api";
+import { toast } from "sonner";
 
 const AuthPage = () => {
   const navigate = useNavigate();
   const [isLogin, setIsLogin] = useState(true);
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (isAuthenticated()) {
+      navigate("/chat");
+    }
+  }, [navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    
-    // Simulate auth - will be replaced with real auth when Cloud is enabled
-    setTimeout(() => {
+
+    try {
+      if (isLogin) {
+        await login(username, password);
+        toast.success("Login erfolgreich!");
+        navigate("/chat");
+      } else {
+        await register(username, password);
+        toast.success("Registrierung erfolgreich! Du kannst dich jetzt einloggen.");
+        setIsLogin(true);
+        setPassword("");
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Ein Fehler ist aufgetreten");
+    } finally {
       setIsLoading(false);
-      navigate("/chat");
-    }, 1000);
+    }
   };
 
   return (
@@ -51,17 +70,17 @@ const AuthPage = () => {
         <div className="glass-card p-8">
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-sm text-muted-foreground">
-                Email
+              <Label htmlFor="username" className="text-sm text-muted-foreground">
+                Benutzername
               </Label>
               <div className="relative">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
-                  id="email"
-                  type="email"
-                  placeholder="you@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  id="username"
+                  type="text"
+                  placeholder="dein_username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
                   className="pl-11"
                   required
                 />

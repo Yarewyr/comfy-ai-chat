@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import ChatMessage from "@/components/ChatMessage";
 import ChatInput from "@/components/ChatInput";
 import { Bot, LogOut, Plus, Sparkles } from "lucide-react";
+import { generateResponse, logout, isAuthenticated } from "@/lib/api";
+import { toast } from "sonner";
 
 interface Message {
   id: string;
@@ -16,6 +18,12 @@ const ChatPage = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isAuthenticated()) {
+      navigate("/auth");
+    }
+  }, [navigate]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -35,16 +43,22 @@ const ChatPage = () => {
     setMessages((prev) => [...prev, userMessage]);
     setIsLoading(true);
 
-    // Simulate AI response - will be replaced with actual ComfyUI API call
-    setTimeout(() => {
+    try {
+      const response = await generateResponse(content);
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
-        content: `This is a simulated response. To connect your ComfyUI backend, you'll need to enable Lovable Cloud and set up an edge function to communicate with your ComfyUI instance.\n\nYour message was: "${content}"`,
+        content: response,
         role: "assistant",
       };
       setMessages((prev) => [...prev, aiMessage]);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Fehler bei der Generierung");
+      if (error instanceof Error && error.message.includes("Session expired")) {
+        navigate("/auth");
+      }
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   };
 
   const handleNewChat = () => {
@@ -52,7 +66,8 @@ const ChatPage = () => {
   };
 
   const handleLogout = () => {
-    navigate("/");
+    logout();
+    navigate("/auth");
   };
 
   return (
